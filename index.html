@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Decobee AR Tile POC</title>
+
+  <!-- Load model-viewer -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+    }
+    .label {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: Arial;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="label">Decobee AR · POC</div>
+
+  <model-viewer
+    src="https://modelviewer.dev/shared-assets/models/Plane.glb"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    camera-controls
+    shadow-intensity="1"
+    style="width: 100vw; height: 100vh;">
+  </model-viewer>
+
+</body>
+</html>
