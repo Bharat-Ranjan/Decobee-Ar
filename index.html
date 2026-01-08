@@ -35,33 +35,74 @@
   <canvas id="canvas"></canvas>
 
   <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    let roomImg = new Image();
-    let tileImg = new Image();
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
 
-    document.getElementById("roomImage").addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      roomImg.src = URL.createObjectURL(file);
-    });
+  let roomImg = new Image();
+  let tileImg = new Image();
+  let points = [];
 
-    roomImg.onload = () => {
-      canvas.width = roomImg.width * 0.5;
-      canvas.height = roomImg.height * 0.5;
-      ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
-    };
+  document.getElementById("roomImage").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    roomImg.src = URL.createObjectURL(file);
+    points = [];
+  });
 
-    function applyTile() {
-      tileImg.src = "assets/tile.jpg";
- // sample tile texture
+  roomImg.onload = () => {
+    canvas.width = roomImg.width * 0.6;
+    canvas.height = roomImg.height * 0.6;
+    redraw();
+  };
+
+  canvas.addEventListener("click", (e) => {
+    if (points.length >= 4) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    points.push({ x, y });
+    redraw();
+  });
+
+  function redraw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
+
+    if (points.length > 0) {
+      ctx.fillStyle = "red";
+      points.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
+  }
 
-    tileImg.onload = () => {
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
-      ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
-      ctx.globalAlpha = 1;
-    };
-  </script>
+  function applyTile() {
+    if (points.length < 4) {
+      alert("Please select 4 floor points");
+      return;
+    }
+    tileImg.src = "assets/tile.jpg";
+  }
+
+  tileImg.onload = () => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  };
+</script>
+
 </body>
 </html>
