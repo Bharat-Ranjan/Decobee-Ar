@@ -1,58 +1,66 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Decobee AR POC</title>
+<head>
+  <title>Decobee Room Visualizer – POC</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: white;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
+    canvas {
+      border: 2px solid #444;
+      margin-top: 15px;
+      max-width: 100%;
+    }
+    input, button {
+      margin: 10px;
+      padding: 8px 12px;
+    }
+  </style>
+</head>
 
-    <!-- A-Frame -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<body>
+  <h2>Decobee Tile Visualizer (POC)</h2>
 
-    <!-- AR.js -->
-    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+  <input type="file" id="roomImage" accept="image/*">
+  <br>
 
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-      #logo {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 999;
-        color: white;
-        background: rgba(0,0,0,0.6);
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-family: Arial;
-      }
-    </style>
-  </head>
+  <button onclick="applyTile()">Apply Tile</button>
 
-  <body>
-    <div id="logo">Decobee AR POC</div>
+  <br>
+  <canvas id="canvas"></canvas>
 
-    <a-scene
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-    >
-      <!-- Marker -->
-      <a-marker
-  preset="hiro"
-  smooth="true"
-  smoothCount="10"
-  smoothTolerance="0.01"
-  smoothThreshold="5"
->
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let roomImg = new Image();
+    let tileImg = new Image();
 
-        <!-- 3D object -->
-        <a-box
-          position="0 0.5 0"
-          material="color: orange;"
-        ></a-box>
-      </a-marker>
+    document.getElementById("roomImage").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      roomImg.src = URL.createObjectURL(file);
+    });
 
-      <!-- Camera -->
-      <a-entity camera></a-entity>
-    </a-scene>
-  </body>
+    roomImg.onload = () => {
+      canvas.width = roomImg.width * 0.5;
+      canvas.height = roomImg.height * 0.5;
+      ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
+    };
+
+    function applyTile() {
+      tileImg.src = "https://i.imgur.com/0Z8FQYF.jpg"; // sample tile texture
+    }
+
+    tileImg.onload = () => {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
+      ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
+      ctx.globalAlpha = 1;
+    };
+  </script>
+</body>
 </html>
