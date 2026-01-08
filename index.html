@@ -41,6 +41,8 @@
   let roomImg = new Image();
   let tileImg = new Image();
   let points = [];
+  let draggingPointIndex = null;
+  const POINT_RADIUS = 10;
 
   document.getElementById("roomImage").addEventListener("change", (e) => {
     const file = e.target.files[0];
@@ -55,57 +57,55 @@
   };
 
   function getCanvasPoint(event) {
-  const rect = canvas.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
 
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+    let clientX, clientY;
+    if (event.touches) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
+    }
 
-  let clientX, clientY;
-
-  if (event.touches) {
-    clientX = event.touches[0].clientX;
-    clientY = event.touches[0].clientY;
-  } else {
-    clientX = event.clientX;
-    clientY = event.clientY;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
   }
-
-  return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY
-  };
-}
-
-// Desktop click
-canvas.addEventListener("click", (e) => {
-  if (points.length >= 4) return;
-  const p = getCanvasPoint(e);
-  points.push(p);
-  redraw();
-});
-
-// Mobile touch
-canvas.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-  if (points.length >= 4) return;
-  const p = getCanvasPoint(e);
-  points.push(p);
-  redraw();
-});
-
 
   function redraw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
 
-    if (points.length > 0) {
-      ctx.fillStyle = "red";
-      points.forEach(p => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-      });
+    if (points.length >= 4 && tileImg.complete) {
+      drawTile();
     }
+
+    points.forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, POINT_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = "red";
+      ctx.fill();
+    });
+  }
+
+  function drawTile() {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   }
 
   function applyTile() {
@@ -116,22 +116,45 @@ canvas.addEventListener("touchstart", (e) => {
     tileImg.src = "assets/tile.jpg";
   }
 
-  tileImg.onload = () => {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.closePath();
-    ctx.clip();
+  tileImg.onload = redraw;
 
-    ctx.globalAlpha = 0.7;
-    ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
-  };
+  // ADD POINTS
+  function handleStart(e) {
+    const p = getCanvasPoint(e);
+
+    draggingPointIndex = points.findIndex(
+      pt => Math.hypot(pt.x - p.x, pt.y - p.y) < POINT_RADIUS
+    );
+
+    if (draggingPointIndex === -1 && points.length < 4) {
+      points.push(p);
+      redraw();
+    }
+  }
+
+  function handleMove(e) {
+    if (draggingPointIndex === null) return;
+    e.preventDefault();
+    const p = getCanvasPoint(e);
+    points[draggingPointIndex] = p;
+    redraw();
+  }
+
+  function handleEnd() {
+    draggingPointIndex = null;
+  }
+
+  // Desktop
+  canvas.addEventListener("mousedown", handleStart);
+  canvas.addEventListener("mousemove", handleMove);
+  canvas.addEventListener("mouseup", handleEnd);
+
+  // Mobile
+  canvas.addEventListener("touchstart", handleStart);
+  canvas.addEventListener("touchmove", handleMove);
+  canvas.addEventListener("touchend", handleEnd);
 </script>
+
 
 </body>
 </html>
