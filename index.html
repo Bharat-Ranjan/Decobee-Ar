@@ -1,46 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Decobee AR Tile POC</title>
+<html>
+  <head>
+    <title>Decobee AR POC</title>
 
-  <!-- Load model-viewer -->
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      background: #000;
-    }
-    .label {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.6);
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-family: Arial;
-      z-index: 10;
-    }
-  </style>
-</head>
+    <!-- AR.js -->
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
 
-<body>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      #logo {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 999;
+        color: white;
+        background: rgba(0,0,0,0.6);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-family: Arial;
+      }
+    </style>
+  </head>
 
-  <div class="label">Decobee AR · POC</div>
+  <body>
+    <div id="logo">Decobee AR POC</div>
 
-  <model-viewer
-  src="https://arvr.google.com/scene-viewer/assets/test/Chair.glb"
-  ar
-  ar-modes="scene-viewer"
-  camera-controls
-  style="width: 100vw; height: 100vh;">
-</model-viewer>
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false;"
+    >
+      <!-- Marker -->
+      <a-marker preset="hiro">
+        <!-- 3D object -->
+        <a-box
+          position="0 0.5 0"
+          material="color: orange;"
+        ></a-box>
+      </a-marker>
 
-
-
-
-
-</body>
+      <!-- Camera -->
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
 </html>
