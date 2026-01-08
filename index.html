@@ -54,16 +54,45 @@
     redraw();
   };
 
-  canvas.addEventListener("click", (e) => {
-    if (points.length >= 4) return;
+  function getCanvasPoint(event) {
+  const rect = canvas.getBoundingClientRect();
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
 
-    points.push({ x, y });
-    redraw();
-  });
+  let clientX, clientY;
+
+  if (event.touches) {
+    clientX = event.touches[0].clientX;
+    clientY = event.touches[0].clientY;
+  } else {
+    clientX = event.clientX;
+    clientY = event.clientY;
+  }
+
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY
+  };
+}
+
+// Desktop click
+canvas.addEventListener("click", (e) => {
+  if (points.length >= 4) return;
+  const p = getCanvasPoint(e);
+  points.push(p);
+  redraw();
+});
+
+// Mobile touch
+canvas.addEventListener("touchstart", (e) => {
+  e.preventDefault();
+  if (points.length >= 4) return;
+  const p = getCanvasPoint(e);
+  points.push(p);
+  redraw();
+});
+
 
   function redraw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
