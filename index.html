@@ -33,127 +33,200 @@
 
   <br>
   <canvas id="canvas"></canvas>
+<button id="maskModeBtn">Mask Object</button>
+<button id="clearMaskBtn">Clear Mask</button>
 
   <script>
-  const canvas = document.getElementById("canvas");
-  const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-  let roomImg = new Image();
-  let tileImg = new Image();
-  let points = [];
-  let draggingPointIndex = null;
-  const POINT_RADIUS = 10;
+let roomImg = new Image();
+let tileImg = new Image();
+let points = [];
+let masks = []; // array of polygons
+let currentMask = [];
+let draggingPointIndex = -1;
+let POINT_RADIUS = 14;
+let POINT_HIT_RADIUS = 30;
+let maskMode = false;
 
-  document.getElementById("roomImage").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    roomImg.src = URL.createObjectURL(file);
-    points = [];
+document.getElementById("roomImage").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  roomImg.src = URL.createObjectURL(file);
+  points = [];
+  masks = [];
+  currentMask = [];
+});
+
+roomImg.onload = () => {
+  canvas.width = roomImg.width * 0.6;
+  canvas.height = roomImg.height * 0.6;
+  redraw();
+};
+
+document.getElementById("maskModeBtn").addEventListener("click", () => {
+  maskMode = true;
+  currentMask = [];
+});
+
+document.getElementById("clearMaskBtn").addEventListener("click", () => {
+  masks = [];
+  currentMask = [];
+  redraw();
+});
+
+function getCanvasPoint(event) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  let clientX, clientY;
+  if (event.touches) {
+    clientX = event.touches[0].clientX;
+    clientY = event.touches[0].clientY;
+  } else {
+    clientX = event.clientX;
+    clientY = event.clientY;
+  }
+  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+}
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
+
+  // draw tile if points exist
+  if (points.length >= 4 && tileImg.complete) {
+    drawTile();
+  }
+
+  // draw floor points
+  points.forEach(pt => {
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, POINT_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = "red";
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.stroke();
   });
 
-  roomImg.onload = () => {
-    canvas.width = roomImg.width * 0.6;
-    canvas.height = roomImg.height * 0.6;
-    redraw();
-  };
-
-  function getCanvasPoint(event) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    let clientX, clientY;
-    if (event.touches) {
-      clientX = event.touches[0].clientX;
-      clientY = event.touches[0].clientY;
-    } else {
-      clientX = event.clientX;
-      clientY = event.clientY;
-    }
-
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
-    };
-  }
-
-  function redraw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
-
-    if (points.length >= 4 && tileImg.complete) {
-      drawTile();
-    }
-
-    points.forEach((p, i) => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, POINT_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = "red";
-      ctx.fill();
-    });
-  }
-
-  function drawTile() {
-    ctx.save();
+  // draw masks in progress
+  ctx.save();
+  ctx.strokeStyle = "blue";
+  ctx.lineWidth = 2;
+  currentMask.forEach((p, i) => {
+    if (i === 0) return;
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
+    ctx.moveTo(currentMask[i - 1].x, currentMask[i - 1].y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawTile() {
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.closePath();
+  ctx.clip();
+
+  // apply tile
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // apply masks
+  masks.forEach(mask => {
+    ctx.beginPath();
+    ctx.moveTo(mask[0].x, mask[0].y);
+    for (let i = 1; i < mask.length; i++) {
+      ctx.lineTo(mask[i].x, mask[i].y);
     }
     ctx.closePath();
-    ctx.clip();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "red";
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  });
 
-    ctx.globalAlpha = 0.8;
-    ctx.fillStyle = ctx.createPattern(tileImg, "repeat");
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
+  ctx.restore();
+}
+
+function applyTile() {
+  if (points.length < 4) {
+    alert("Please select 4 floor points");
+    return;
+  }
+  tileImg.src = "assets/tile.jpg";
+}
+
+tileImg.onload = redraw;
+
+// Floor points dragging
+function handleStart(e) {
+  const p = getCanvasPoint(e);
+
+  if (maskMode) {
+    currentMask.push(p);
+    redraw();
+    return;
   }
 
-  function applyTile() {
-    if (points.length < 4) {
-      alert("Please select 4 floor points");
-      return;
-    }
-    tileImg.src = "assets/tile.jpg";
+  draggingPointIndex = points.findIndex(
+    pt => Math.hypot(pt.x - p.x, pt.y - p.y) < POINT_HIT_RADIUS
+  );
+
+  if (draggingPointIndex === -1 && points.length < 4) {
+    points.push(p);
+    redraw();
   }
+}
 
-  tileImg.onload = redraw;
+function handleMove(e) {
+  e.preventDefault();
+  const p = getCanvasPoint(e);
 
-  // ADD POINTS
-  function handleStart(e) {
-    const p = getCanvasPoint(e);
-
-    draggingPointIndex = points.findIndex(
-      pt => Math.hypot(pt.x - p.x, pt.y - p.y) < POINT_RADIUS
-    );
-
-    if (draggingPointIndex === -1 && points.length < 4) {
-      points.push(p);
+  if (maskMode) {
+    if (currentMask.length > 0) {
+      // update last point while dragging for smoother drawing
+      currentMask[currentMask.length - 1] = p;
       redraw();
     }
+    return;
   }
 
-  function handleMove(e) {
-    if (draggingPointIndex === null) return;
-    e.preventDefault();
-    const p = getCanvasPoint(e);
+  if (draggingPointIndex !== -1) {
     points[draggingPointIndex] = p;
     redraw();
   }
+}
 
-  function handleEnd() {
-    draggingPointIndex = null;
+function handleEnd() {
+  if (maskMode && currentMask.length > 2) {
+    // finalize mask
+    masks.push([...currentMask]);
+    currentMask = [];
+    maskMode = false;
   }
+  draggingPointIndex = -1;
+}
 
-  // Desktop
-  canvas.addEventListener("mousedown", handleStart);
-  canvas.addEventListener("mousemove", handleMove);
-  canvas.addEventListener("mouseup", handleEnd);
+// desktop
+canvas.addEventListener("mousedown", handleStart);
+canvas.addEventListener("mousemove", handleMove);
+canvas.addEventListener("mouseup", handleEnd);
 
-  // Mobile
-  canvas.addEventListener("touchstart", handleStart);
-  canvas.addEventListener("touchmove", handleMove);
-  canvas.addEventListener("touchend", handleEnd);
+// mobile
+canvas.addEventListener("touchstart", handleStart);
+canvas.addEventListener("touchmove", handleMove);
+canvas.addEventListener("touchend", handleEnd);
+
 </script>
+
 
 
 </body>
